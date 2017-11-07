@@ -19,9 +19,15 @@ module Formally
 
       _schema = @schema
       _fields = @fields || []
-      _predicates = (self.class.all_method_names(@klass) - IGNORED_METHODS).map do |name|
-        @klass.instance_method name
-      end.select { |m| m.arity == 0 || m.arity == 1 }
+
+      _predicates = []
+      (self.class.all_method_names(@klass) - IGNORED_METHODS).each do |name|
+        method = @klass.instance_method name
+        _predicates.push method if method.arity == 0 || method.arity == 1
+      end
+      Formally::Predicates.instance_methods.each do |name|
+        _predicates.push Formally::Predicates.instance_method name
+      end
 
       @finalized_schema = Dry::Validation.Form do
         configure do

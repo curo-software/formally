@@ -1,6 +1,13 @@
 require 'spec_helper'
 require 'manioc'
 
+Formally.predicates do
+  UUID_EXP = /\A[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}\Z/
+  def uuid? str
+    str =~ UUID_EXP
+  end
+end
+
 class User
 end
 
@@ -38,11 +45,6 @@ class UploadAttachment < Manioc.mutable(:post, :uploader, :database)
 
   def save
     post.attachment = attachment
-  end
-
-  UUID_EXP = /\A[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}\Z/
-  def uuid? str
-    str =~ UUID_EXP
   end
 
   def attachment_present?

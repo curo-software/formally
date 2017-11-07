@@ -15,6 +15,12 @@ module Formally
     base.formally = Formally::Config.new(base)
   end
 
+  module Predicates
+  end
+  def self.predicates &block
+    Predicates.class_exec(&block)
+  end
+
   attr_reader :formally
 
   extend Forwardable
