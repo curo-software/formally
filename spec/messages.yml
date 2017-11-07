@@ -1,0 +1,7 @@
+en:
+  errors:
+    palindrome?: 'is not a palindrome'
+    uuid?: 'is not a valid uuid'
+    dimensions_match?: 'has incompatible dimensions'
+
+    accepting_replacements: 'published posts cannot be updated'
