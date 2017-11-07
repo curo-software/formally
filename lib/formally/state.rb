@@ -1,16 +1,16 @@
 module Formally
-  class Ally
-    def initialize schema, object
-      @schema, @object = schema, object
+  class State
+    def initialize config, object
+      @config, @object = config, object
     end
 
     def call data
       injections = { _self: @object }
-      @object.class.formally.fields.each do |name|
+      @config.fields.each do |name|
         injections[name] = @object.send name
       end
 
-      result  = @schema.with(injections).call data
+      result  = @config.finalized_schema.with(injections).call data
       @data   = result.output
       @errors = result.errors
       @filled = true
@@ -26,6 +26,10 @@ module Formally
 
     def valid?
       errors.empty?
+    end
+
+    def transaction &block
+      @config.transaction.call(&block)
     end
   end
 end

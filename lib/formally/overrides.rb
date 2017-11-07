@@ -23,7 +23,19 @@ module Formally
 
     def save
       return false unless formally.valid?
-      super
+      formally.transaction do
+        super
+      end
+      true
+    end
+
+    def save!
+      unless save
+        ex = Formally::Invalid.new
+        ex.form   = self
+        ex.errors = errors
+        raise ex
+      end
       true
     end
   end

@@ -1,38 +1,17 @@
 module Formally
-  class Config
-    attr_accessor :schema, :fields
+  class Config < Manioc.mutable(:base, :transaction, :klass, :fields)
+    attr_accessor :schema
+    attr_reader :finalized_schema
 
-    def initialize klass
-      @klass  = klass
-      @fields = []
-    end
+    def finalize
+      return if @finalized_schema
 
-    def self.all_method_names klass
-      (klass.instance_methods + klass.private_instance_methods).grep(/\?$/)
-    end
+      _schema     = schema
+      _fields     = fields || []
+      _predicates = Formally::PredicateFinder.call klass
 
-    IGNORED_METHODS = all_method_names Object
-
-    def finalized_schema
-      raise SchemaUndefined unless @schema
-      return @finalized_schema if @finalized_schema
-
-      _schema = @schema
-      _fields = @fields || []
-
-      _predicates = []
-      (self.class.all_method_names(@klass) - IGNORED_METHODS).each do |name|
-        method = @klass.instance_method name
-        _predicates.push method if method.arity == 0 || method.arity == 1
-      end
-      Formally::Predicates.instance_methods.each do |name|
-        _predicates.push Formally::Predicates.instance_method name
-      end
-
-      @finalized_schema = Dry::Validation.Form do
+      @finalized_schema = Dry::Validation.Form base do
         configure do
-          config.messages_file = File.expand_path('../../spec/messages.yml', __dir__)
-
           _fields.each do |name|
             option name
           end
@@ -58,15 +37,14 @@ module Formally
       end
 
       freeze
-
-      @finalized_schema
     end
 
     def new object
-      unless object.is_a? @klass
+      unless object.is_a? klass
         raise ClassMismatch, "#{object.class} is not a #{@klass}"
       end
-      Ally.new finalized_schema, object
+      finalize
+      State.new self, object
     end
   end
 end

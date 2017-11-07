@@ -1,25 +1,40 @@
 require 'dry-validation'
+require 'manioc'
 
 require 'formally/errors'
 require 'formally/version'
 
-require 'formally/ally'
 require 'formally/class_methods'
 require 'formally/config'
 require 'formally/overrides'
+require 'formally/predicate_finder'
+require 'formally/state'
+
+require 'formally/railtie' if defined? Rails::Railtie
 
 module Formally
-  def self.included base
-    base.extend  Formally::ClassMethods
-    base.prepend Formally::Overrides
-    base.formally = Formally::Config.new(base)
-  end
-
   module Predicates
   end
-  def self.predicates &block
-    Predicates.class_exec(&block)
+
+  class << self
+    attr_accessor :config
+
+    def predicates &block
+      Predicates.class_exec(&block)
+    end
+
+    def included base
+      base.extend  Formally::ClassMethods
+      base.prepend Formally::Overrides
+      base.formally = Formally.config.with(klass: base)
+    end
   end
+
+  self.config = Formally::Config.new \
+    klass: nil, # will be completed at include time
+    base:  nil,
+    fields: [],
+    transaction: ->(&block) { block.call }
 
   attr_reader :formally
 

@@ -81,6 +81,13 @@ RSpec.describe Formally do
     expect(post.attachment.url).to eq URI(url)
   end
 
+  it 'can save!' do
+    form.fill
+    expect { form.save! }.to raise_error(Formally::Invalid) do |e|
+      expect(e.errors[:url]).to include 'is missing'
+    end
+  end
+
   it 'can use helper methods' do
     form.fill url: url, uuid: 'invalid uuid'
 
