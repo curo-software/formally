@@ -1,16 +1,12 @@
 module Formally
   class State
-    def initialize config, object
-      @config, @object = config, object
+    def initialize schema:, transaction:
+      @schema, @transaction = schema, transaction
+      @callbacks = { after_commit: [] }
     end
 
     def call data
-      injections = { _self: @object }
-      @config.fields.each do |name|
-        injections[name] = @object.send name
-      end
-
-      result  = @config.finalized_schema.with(injections).call data
+      result  = @schema.call data
       @data   = result.output
       @errors = result.errors
       @filled = true
@@ -29,7 +25,15 @@ module Formally
     end
 
     def transaction &block
-      @config.transaction.call(&block)
+      @transaction.call(&block)
+    end
+
+    def after_commit &block
+      @callbacks[:after_commit].push block
+    end
+
+    def callbacks key
+      @callbacks.fetch key, []
     end
   end
 end

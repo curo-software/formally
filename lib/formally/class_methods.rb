@@ -2,12 +2,17 @@ module Formally
   module ClassMethods
     attr_writer :formally
 
-    def formally *fields, &block
+    def formally &block
       if block
         @formally.schema = block
-        @formally.fields += fields
       end
       @formally
+    end
+
+    def build **opts
+      new(**opts).tap do |instance|
+        instance.formally = formally.build(**opts)
+      end
     end
   end
 end

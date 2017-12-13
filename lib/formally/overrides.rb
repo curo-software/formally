@@ -1,10 +1,5 @@
 module Formally
   module Overrides
-    def initialize *args
-      super(*args)
-      @formally = self.class.formally.new self
-    end
-
     def fill data={}
       if data.respond_to?(:permit!)
         # Assume ActionController::Parameters or similar
@@ -26,6 +21,7 @@ module Formally
       formally.transaction do
         super
       end
+      formally.callbacks(:after_commit).each(&:call)
       true
     end
 

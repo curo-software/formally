@@ -1,50 +1,28 @@
 module Formally
-  class Config < Manioc.mutable(:base, :transaction, :klass, :fields)
+  class Config < Manioc.mutable(:base, :predicates, :transaction, :klass)
     attr_accessor :schema
-    attr_reader :finalized_schema
 
-    def finalize
-      return if @finalized_schema
-
-      _schema     = schema
-      _fields     = fields || []
-      _predicates = Formally::PredicateFinder.call klass
-
-      @finalized_schema = Dry::Validation.Form base do
-        configure do
-          _fields.each do |name|
-            option name
-          end
-
-          option :_self
-
-          _predicates.each do |method|
-            if method.arity == 0
-              define_method method.name do
-                method.bind(_self).call
-              end
-            else
-              define_method method.name do |arg|
-                method.bind(_self).call arg
-              end
-            end
-          end
-
-          # class_exec(&_configure) if _configure
-        end
-
-        instance_exec(&_schema)
-      end
-
-      freeze
+    def build **opts
+      Formally::State.new \
+        schema:      schema_for(**opts),
+        transaction: transaction
     end
 
-    def new object
-      unless object.is_a? klass
-        raise ClassMismatch, "#{object.class} is not a #{@klass}"
+    private
+
+    def schema_for **opts
+      if opts.none? && schema.arity.zero?
+        @_cached_schema ||= build_schema
+      else
+        build_schema opts
       end
-      finalize
-      State.new self, object
+    end
+
+    def build_schema *args
+      _schema = schema
+      Dry::Validation.Form base do
+        instance_exec(*args, &_schema)
+      end
     end
   end
 end

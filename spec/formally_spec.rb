@@ -1,12 +1,15 @@
 require 'spec_helper'
 require 'manioc'
+require 'uri'
 
-Formally.predicates do
+class Schema < Dry::Validation::Schema
   UUID_EXP = /\A[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}\Z/
   def uuid? str
     str =~ UUID_EXP
   end
 end
+
+Formally.config.base = Schema
 
 class User
 end
@@ -21,7 +24,19 @@ end
 class UploadAttachment < Manioc.mutable(:post, :uploader, :database)
   include Formally
 
-  formally :post do
+  formally do |post:, **_|
+    configure do
+      define_method(:post) { post }
+
+      def attachment_present?
+        !post.attachment.nil?
+      end
+
+      def dimensions_match? url:
+        post.attachment.url.length == url.length
+      end
+    end
+
     required(:url ).filled :str?
     optional(:uuid).filled :uuid?
 
@@ -41,18 +56,14 @@ class UploadAttachment < Manioc.mutable(:post, :uploader, :database)
       uuid:     data[:uuid] || database.uuid,
       url:      URI(data[:url]),
       uploader: uploader
+
+    formally.after_commit do
+      database.callback
+    end
   end
 
   def save
     post.attachment = attachment
-  end
-
-  def attachment_present?
-    !post.attachment.nil?
-  end
-
-  def dimensions_match? url:
-    post.attachment.url.length == url.length
   end
 end
 
@@ -70,10 +81,12 @@ RSpec.describe Formally do
 
   let(:database) { double 'database', uuid: SecureRandom.uuid }
 
-  let(:form) { UploadAttachment.new post: post, uploader: user, database: database }
+  let(:form) { UploadAttachment.build post: post, uploader: user, database: database }
 
   it 'can save' do
     form.fill url: url
+
+    expect(database).to receive(:callback)
 
     expect(form.errors).to be_empty
     expect(form.save).to eq true
@@ -83,6 +96,9 @@ RSpec.describe Formally do
 
   it 'can save!' do
     form.fill
+
+    expect(database).not_to receive(:callback)
+
     expect { form.save! }.to raise_error(Formally::Invalid) do |e|
       expect(e.errors[:url]).to include 'is missing'
     end
