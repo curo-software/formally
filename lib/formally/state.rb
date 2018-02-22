@@ -6,7 +6,7 @@ module Formally
     end
 
     def call data
-      result  = @schema.call data
+      result  = @schema.call(data || {})
       @data   = result.output
       @errors = result.errors
       @filled = true
