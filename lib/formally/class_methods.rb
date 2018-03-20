@@ -8,11 +8,5 @@ module Formally
       end
       @formally
     end
-
-    def build **opts
-      new(**opts).tap do |instance|
-        instance.formally = formally.build(**opts)
-      end
-    end
   end
 end

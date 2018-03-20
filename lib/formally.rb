@@ -15,9 +15,8 @@ module Formally
   class << self
     attr_accessor :config
 
-    def included base
-      base.extend  Formally::ClassMethods
-      base.prepend Formally::Overrides
+    def prepended base
+      base.extend Formally::ClassMethods
       base.formally = Formally.config.with(klass: base)
     end
 
@@ -38,13 +37,49 @@ module Formally
     predicates: [],
     transaction: ->(&block) { block.call }
 
-  attr_writer :formally
-
-  def formally
-    @formally ||= self.class.formally.build
-  end
+  attr_reader :formally
 
   extend Forwardable
 
   def_delegators :@formally, :errors, :valid?
+
+  def initialize *args
+    super
+    @formally = self.class.formally.new self
+  end
+
+  def fill data={}
+    if data.respond_to?(:permit!)
+      # Assume ActionController::Parameters or similar
+      # The schema will handle whitelisting allowed attributes
+      data = data.permit!.to_h.deep_symbolize_keys
+    end
+
+    formally.call data
+
+    if formally.valid?
+      super formally.data
+    end
+
+    self
+  end
+
+  def save
+    return false unless formally.valid?
+    formally.transaction do
+      super
+    end
+    formally.callbacks(:after_commit).each(&:call)
+    true
+  end
+
+  def save!
+    unless save
+      ex = Formally::Invalid.new
+      ex.form   = self
+      ex.errors = errors
+      raise ex
+    end
+    true
+  end
 end

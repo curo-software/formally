@@ -1,28 +1,58 @@
 # Formally
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/formally`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
-
-## Installation
-
-Add this line to your application's Gemfile:
-
-```ruby
-gem 'formally'
-```
-
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install formally
+A slim wrapper around `dry-validations` that makes it easier to write stateful form objects
 
 ## Usage
 
-TODO: Write usage instructions here
+Add a schema to your class
+
+```
+class UserUpdateForm
+  prepend Formally
+  formally do |f|
+    required(:name)     { str? }
+    required(:password) { eql? f.user.password }
+  end
+
+  attr_reader :user
+
+  def initialize user
+    @user = user
+  end
+
+  # This method will only ever be called with data validated by the
+  # schema above
+  def fill data
+    @user.name = data.fetch(:name)
+  end
+
+  # This method is wrapped in a (configurable) transaction
+  def save
+    # ...
+  end
+end
+```
+
+and use it
+
+```
+form = UserUpdateForm.new(user: ...)
+form.fill(name: 'James Dabbs', password: 'hunter2').save!
+```
+
+## API
+
+Note that `Formally` does _prepend_ and so alters the following methods:
+
+* fill(data) - only ever called with valid data; always returns the form
+* save - wrapped in a transaction; returns true or false
+* save! - calls `save` or raises an error
+
+It also adds
+
+* formally - contains most form metadata
+* errors - to retrieve errors after `fill`ing
+* valid? - to check if the form was `fill`ed with valid data
 
 ## Development
 

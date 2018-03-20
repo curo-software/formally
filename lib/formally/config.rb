@@ -2,19 +2,19 @@ module Formally
   class Config < Manioc.mutable(:base, :predicates, :transaction, :klass)
     attr_accessor :schema
 
-    def build **opts
+    def new instance
       Formally::State.new \
-        schema:      schema_for(**opts),
+        schema:      schema_for(instance),
         transaction: transaction
     end
 
     private
 
-    def schema_for **opts
-      if opts.none? && schema.arity.zero?
-        @_cached_schema ||= build_schema
+    def schema_for instance
+      if schema.arity.zero?
+        @_cached_schema ||= build_schema instance
       else
-        build_schema opts
+        build_schema instance
       end
     end
 

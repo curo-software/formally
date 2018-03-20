@@ -22,11 +22,11 @@ class Attachment < Manioc[:url, :uuid, :uploader]
 end
 
 class UploadAttachment < Manioc.mutable(:post, :uploader, :database)
-  include Formally
+  prepend Formally
 
-  formally do |post:, **_|
+  formally do |f|
     configure do
-      define_method(:post) { post }
+      define_method(:post) { f.post }
 
       def attachment_present?
         !post.attachment.nil?
@@ -81,7 +81,7 @@ RSpec.describe Formally do
 
   let(:database) { double 'database', uuid: SecureRandom.uuid }
 
-  let(:form) { UploadAttachment.build post: post, uploader: user, database: database }
+  let(:form) { UploadAttachment.new post: post, uploader: user, database: database }
 
   it 'can save' do
     form.fill url: url
